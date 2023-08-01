@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local
+    ports:
+      - 8000:8000
+    command: ['-jar', 'DynamoDBLocal.jar', '-inMemory', '-sharedDb']
+    container_name: dynamodb-example-service
+    networks:
+      - local
+
+networks:
+  local:
+    external: true

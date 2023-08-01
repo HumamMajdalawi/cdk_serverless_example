@@ -1,8 +1,8 @@
 module.exports = {
-  testEnvironment: 'node',
-  roots: ['<rootDir>/test'],
+  roots: ['<rootDir>'],
   testMatch: ['**/*.test.ts'],
-  transform: {
-    '^.+\\.tsx?$': 'ts-jest'
-  }
-};
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  globalSetup: './jest.global.setup.ts',
+  globalTeardown: './jest.global.teardown.ts'
+}
