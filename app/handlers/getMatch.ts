@@ -11,7 +11,7 @@ import {
 } from "../types";
 import { IngestRepository } from "../database/ingestRepo";
 
-export class GetMatch implements Controller<null, GetMatchResponseType> {
+export class GetMatchController implements Controller<null, GetMatchResponseType> {
   async handle(req: Request<null>): Promise<Response<GetMatchResponseType>> {
     const { match_id } = req.getPathParameters();
 
@@ -49,4 +49,4 @@ export class GetMatch implements Controller<null, GetMatchResponseType> {
   }
 }
 
-export const handler = createControllerHandler(new GetMatch());
+export const handler = createControllerHandler(new GetMatchController());

@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "jest --runInBand --watch ./app",
+    "test": "set AWS_SDK_LOAD_CONFIG=1 && jest --runInBand --watch ./app",
     "local:db": "cd ./local && docker-compose up -d",
     "cdk": "cdk"
   },

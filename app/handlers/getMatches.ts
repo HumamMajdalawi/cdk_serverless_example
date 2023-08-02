@@ -1,6 +1,5 @@
 import {
   Controller,
-  Request,
   Response,
   createControllerHandler,
 } from "../util/apiGateway";
@@ -10,8 +9,8 @@ import {
 } from "../types";
 import { MatchesRepository } from "../database/matchesRepo";
 
-export class GetMatches implements Controller<null, GetMatchsResponseType> {
-  async handle(req: Request<null>): Promise<Response<GetMatchsResponseType>> {
+export class GetMatchesController implements Controller<null, GetMatchsResponseType> {
+  async handle(): Promise<Response<GetMatchsResponseType>> {
     const matchesRepo = new MatchesRepository();
     const matches = await matchesRepo.getMatches();
     const res: MatchResponseType[] = [];
@@ -31,4 +30,4 @@ export class GetMatches implements Controller<null, GetMatchsResponseType> {
   }
 }
 
-export const handler = createControllerHandler(new GetMatches());
+export const handler = createControllerHandler(new GetMatchesController());

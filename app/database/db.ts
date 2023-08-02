@@ -63,7 +63,7 @@ const gsis: GlobalSecondaryIndex[] = [
 export const createLocalDbTable = async (): Promise<void> => {
   const x = getDocClientConfig()
   const db = new aws.DynamoDB(x)
-  console.log("I am here! ", db)
+  console.log("I am here! ", x)
   const { TableNames } = await db.listTables({"Limit":2}).promise()
 
   if (!TableNames?.includes(tableName))

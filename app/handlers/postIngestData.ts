@@ -37,7 +37,7 @@ const schema = yup.object().shape({
   timestamp: yup.string().required(),
   team: yup.string().required(),
   opponent: yup.string().required(),
-  event_type: yup.boolean().required(),
+  event_type: yup.string().required(),
   emailId: yup.string().nullable(),
   productId: yup.string().nullable(),
   productName: yup.string().nullable(),
@@ -65,7 +65,7 @@ export class PostIngestDataController
 
     const matchExsist = await matchRepo.getMatch(data.match_id, data.team)
 
-    if(!matchExsist.match_id)
+    if(!matchExsist?.match_id)
     await matchRepo.createMatch({
       date: data.timestamp,
       team: data.team,
