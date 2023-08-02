@@ -5,12 +5,12 @@ import {
   createControllerHandler,
 } from "../util/apiGateway";
 import {
-  IngestDataAttributes,
   IngestDataInputType,
   SuccessMsgType,
 } from "../types";
 import * as yup from "yup";
 import { IngestRepository } from "../database/ingestRepo";
+import { MatchesRepository } from "../database/matchesRepo";
 
 const playerSchema = {
   name: yup.string().required(),
@@ -61,6 +61,18 @@ export class PostIngestDataController
     }
     const ingestRepo = new IngestRepository();
     const eventId = await ingestRepo.createEvent(data);
+    const matchRepo = new MatchesRepository()
+
+    const matchExsist = await matchRepo.getMatch(data.match_id, data.team)
+
+    if(!matchExsist.match_id)
+    await matchRepo.createMatch({
+      date: data.timestamp,
+      team: data.team,
+      opponent: data.opponent,
+      match_id: data.match_id
+    })
+
     return Response.OK({
       status: "success",
       message: "Data successfully ingested.",

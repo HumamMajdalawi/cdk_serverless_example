@@ -30,12 +30,45 @@ export type IngestDataInputType = {
   event_details: EventDetailType;
 };
 
+export type MatchInputType = {
+  match_id: string;
+  date: string;
+  team: string;
+  opponent: string;
+};
+
+export type GetMatchsResponseType = {
+  status: "success";
+  matches: MatchResponseType[];
+};
+
+export type GetMatchResponseType = {
+  status: "success";
+  match: MatchResponseType & { events: EventResponseType[] };
+};
+
+export type MatchResponseType = {
+  team: string;
+  date: string;
+  opponent: string;
+  match_id: string;
+};
+
+export type EventResponseType = {
+  event_type: string;
+  timestamp: string;
+  player: string;
+  goal_type?: string;
+  minute: number;
+  video_url?: string;
+};
+
 export type IngestDataAttributes = {
   _et?: string;
   _ct?: string;
   _md?: string;
-  PK: string
-  SK: string
+  PK: string;
+  SK: string;
   match_id: string;
   timestamp: string;
   team: string;
@@ -43,6 +76,18 @@ export type IngestDataAttributes = {
   event_type: string;
   event_details: EventDetailType;
   eventId?: string;
+};
+
+export type MatchAttributes = {
+  _et?: string;
+  _ct?: string;
+  _md?: string;
+  PK: string;
+  SK: string;
+  match_id: string;
+  date: string;
+  team: string;
+  opponent: string;
 };
 
 export type EventDetailType = {

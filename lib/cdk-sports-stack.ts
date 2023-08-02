@@ -15,12 +15,12 @@ import {
 import { Construct } from "constructs";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { ITable } from "aws-cdk-lib/aws-dynamodb";
-
+import { handleSportsDBStream } from "../app/handlers/streamHandler";
 
 // DynamoDB
 // DynamoDB Stream
 // API Gateway
-// Lambda 
+// Lambda
 // Route53
 
 export class CdkSportsStack extends cdk.Stack {
@@ -33,15 +33,15 @@ export class CdkSportsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
     this.createDynamoDBTables();
-    this.api = this.configureApiGateway()
-    if (this.api) routes(this).forEach((route) => this.configureApiRoute(route))
-
+    this.api = this.configureApiGateway();
+    if (this.api)
+      routes(this).forEach((route) => this.configureApiRoute(route));
   }
 
   createDynamoDBTables() {
     this.ingestTable = new dynamodb.Table(this, config.db.mainTable, {
       partitionKey: {
-        name: "matchId",
+        name: "match_id",
         type: dynamodb.AttributeType.STRING,
       },
       sortKey: {
@@ -57,14 +57,7 @@ export class CdkSportsStack extends cdk.Stack {
     const streamHandler = new lambda.Function(this, "StreamHandler", {
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: "index.handler",
-      code: lambda.Code.fromInline(`
-      exports.handler = async (event) => {
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ message: 'Hello from Lambda!' }),
-        };
-      };
-    `), // TODO
+      code: lambda.Code.fromAsset("/app/handlers/handleSportsDBStream"),
     });
 
     // Create the DynamoDB Stream Event source and associate it with the Lambda function
@@ -186,7 +179,12 @@ export class CdkSportsStack extends cdk.Stack {
 
     resource.addMethod(apiTrigger.api.method, integration);
     this.apiGatewayResources.add(resource);
-    this.ingestTable && this.ingestTable.grantReadWriteData(lambdaFunction);
+    if (apiTrigger?.environment?.mainTable) {
+      this.ingestTable && this.ingestTable.grantReadWriteData(lambdaFunction);
+    }
+    if (apiTrigger?.environment?.stramTable) {
+      this.streamTable && this.streamTable.grantReadWriteData(lambdaFunction);
+    }
   }
 
   getResourceName(postfix: string): string {

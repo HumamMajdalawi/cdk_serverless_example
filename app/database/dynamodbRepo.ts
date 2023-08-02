@@ -133,4 +133,16 @@ export abstract class DynamoRepository<Schema extends { [key in keyof Schema]: S
       }
       return items
     }
+
+    async  queryDocumentsByEt(entityType: string): Promise<SchemaType[]> {
+      try {
+        const result = await this.entity.scan({
+          filters: [{ attr: '_et', eq: entityType }],
+        });
+        return result.Items || [];
+      } catch (error) {
+        console.error('Error querying documents:', error);
+        return [];
+      }
+    }
 }
