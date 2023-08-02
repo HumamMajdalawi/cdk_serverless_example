@@ -7,9 +7,12 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "set AWS_SDK_LOAD_CONFIG=1 && jest --runInBand --watch ./app",
+    "test": " jest --runInBand --watch ./app",
     "local:db": "cd ./local && docker-compose up -d",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "deploy:development": "NODE_ENV=development npm run build && NODE_ENV=development cdk deploy --profile development --all --hotswap",
+    "deploy:production": "NODE_ENV=production npm run build && NODE_ENV=production cdk deploy --profile production --all"
+
   },
   "devDependencies": {
     "@types/jest": "^29.5.3",
