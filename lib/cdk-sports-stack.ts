@@ -1,12 +1,10 @@
 import * as cdk from "aws-cdk-lib";
-import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as events from "aws-cdk-lib/aws-lambda-event-sources";
 import { ApiTrigger, routes } from "./routes";
 import { config } from "./config";
 import {
-  EndpointType,
   LambdaIntegration,
   Resource,
   RestApi,
@@ -15,18 +13,11 @@ import {
 import { Construct } from "constructs";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { ITable } from "aws-cdk-lib/aws-dynamodb";
-import { handleSportsDBStream } from "../app/handlers/streamHandler";
-
-// DynamoDB
-// DynamoDB Stream
-// API Gateway
-// Lambda
-// Route53
+import { getResourceName, getRestProps } from "./functions";
 
 export class CdkSportsStack extends cdk.Stack {
   protected apiGatewayResources = new Set<Resource>();
   private api: RestApi;
-  private dynamoDb?: ITable;
   private ingestTable: ITable;
   private streamTable: ITable;
 
@@ -38,51 +29,43 @@ export class CdkSportsStack extends cdk.Stack {
       routes(this).forEach((route) => this.configureApiRoute(route));
   }
 
-  createDynamoDBTables() {
-    this.ingestTable = new dynamodb.Table(this, config.db.mainTable, {
+  createTable(pk: string, sk: string): dynamodb.Table {
+    return new dynamodb.Table(this, config.db.mainTable, {
       partitionKey: {
-        name: "match_id",
+        name: pk,
         type: dynamodb.AttributeType.STRING,
       },
       sortKey: {
-        name: "timestamp",
+        name: sk,
         type: dynamodb.AttributeType.STRING,
       },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
       tableName: config.db.mainTable,
     });
+  }
 
-    // Create the Lambda function that will be triggered by the DynamoDB Stream
+  createEventStream() {
     const streamHandler = new lambda.Function(this, "StreamHandler", {
       runtime: lambda.Runtime.NODEJS_14_X,
-      handler: "index.handler",
-      code: lambda.Code.fromAsset("/app/handlers/handleSportsDBStream"),
+      handler: "handleSportsDBStream",
+      code: lambda.Code.fromInline("./app/handlers/streamHandler"),
     });
-
-    // Create the DynamoDB Stream Event source and associate it with the Lambda function
     const streamEventSource = new events.DynamoEventSource(this.ingestTable, {
       startingPosition: lambda.StartingPosition.TRIM_HORIZON,
       batchSize: 1,
       bisectBatchOnError: true,
       retryAttempts: 10,
     });
-
     streamHandler.addEventSource(streamEventSource);
 
-    this.streamTable = new dynamodb.Table(this, config.db.stramTable, {
-      partitionKey: {
-        name: "matchId",
-        type: dynamodb.AttributeType.STRING,
-      },
-      sortKey: {
-        name: "id",
-        type: dynamodb.AttributeType.STRING,
-      },
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      tableName: config.db.stramTable,
-    });
+    return streamHandler;
+  }
 
+  createDynamoDBTables() {
+    this.ingestTable = this.createTable("match_id", "timestamp");
+    const streamHandler = this.createEventStream();
+    this.streamTable = this.createTable("match_id", "random_id");
     this.ingestTable.grantReadData(streamHandler);
     this.streamTable.grantFullAccess(streamHandler);
   }
@@ -91,7 +74,7 @@ export class CdkSportsStack extends cdk.Stack {
     const lastIndexOfSlash = trigger.handler.lastIndexOf("/");
 
     const postfix = `${trigger.id}-${trigger.api.method}-Lambda`;
-    const lambdaName = this.getResourceName(postfix);
+    const lambdaName = getResourceName(postfix);
 
     return new Function(this, lambdaName, {
       functionName: lambdaName,
@@ -109,47 +92,7 @@ export class CdkSportsStack extends cdk.Stack {
     });
   }
 
-  configureApiGateway(): RestApi {
-    if (!routes(this).length) return {} as RestApi;
-
-    const apiGatewayName = this.getResourceName("Api");
-
-    let subdomain: string;
-
-    const stage = "development";
-
-    let restApiProps: RestApiProps = {
-      description: `Microservice API for ${config.serviceName} V${config.subStackVersion}`,
-      restApiName: apiGatewayName,
-      deployOptions: {
-        stageName: stage,
-        cacheTtl: cdk.Duration.seconds(0),
-        cachingEnabled: false,
-      },
-      domainName: {
-        domainName: `${config.api?.domain}`,
-        endpointType: EndpointType.REGIONAL,
-        certificate: acm.Certificate.fromCertificateArn(
-          this,
-          "Certificate",
-          config.api.certArn
-        ),
-      },
-      defaultCorsPreflightOptions: {
-        allowOrigins: ["*"],
-        allowHeaders: [
-          "Content-Type",
-          "X-Amz-Date",
-          "Authorization",
-          "X-Api-Key",
-        ],
-        allowMethods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
-        allowCredentials: true,
-      },
-    };
-
-    const api = new RestApi(this, apiGatewayName, restApiProps);
-
+  configureRouteZone(api: cdk.aws_apigateway.RestApi) {
     const zone = cdk.aws_route53.HostedZone.fromLookup(this, "DNS-Zone", {
       domainName: config.api.domain,
     });
@@ -166,7 +109,15 @@ export class CdkSportsStack extends cdk.Stack {
       value: `https://${config.api.subdomain}.${config.api.domain}`,
       exportName: `${config.serviceName}-apigateway-v${config.subStackVersion}-url`,
     });
+  }
 
+  configureApiGateway(): RestApi {
+    if (!routes(this).length) return {} as RestApi;
+
+    const apiGatewayName = getResourceName("Api");
+    let restApiProps: RestApiProps = getRestProps(this, apiGatewayName);
+    const api = new RestApi(this, apiGatewayName, restApiProps);
+    this.configureRouteZone(api);
     return api;
   }
 
@@ -185,9 +136,5 @@ export class CdkSportsStack extends cdk.Stack {
     if (apiTrigger?.environment?.stramTable) {
       this.streamTable && this.streamTable.grantReadWriteData(lambdaFunction);
     }
-  }
-
-  getResourceName(postfix: string): string {
-    return `${config.serviceName}-V${config.subStackVersion}-${postfix}`;
   }
 }

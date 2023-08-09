@@ -9,3 +9,6 @@ export const getEnv = (key: string, fallback?: string): string => {
   return process.env[key] ?? fallback as string
 }
 
+
+export const getEnvironment = (): Environment => getEnv('NODE_ENV', 'local') as Environment
+

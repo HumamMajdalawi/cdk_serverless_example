@@ -3,19 +3,15 @@ import {
   APIGatewayProxyResult,
   Handler,
 } from "aws-lambda";
-import { getEnv } from "../config";
 
 export interface Controller<RequestData, ResponseData> {
   handle(req: Request<RequestData>): Promise<Response<ResponseData>>;
 }
 
 export const makeAwsGatewayResponse = <T>(
-  res: Response<T>,
+  res: Response<T>
 ): APIGatewayProxyResult => {
   const responseData = res.getData();
-
-  const allowedOrigins = getEnv("allowedOrigins", "").split(",");
-
   let headers = res.getHeaders();
 
   headers = {

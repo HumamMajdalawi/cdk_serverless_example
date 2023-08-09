@@ -1,5 +1,6 @@
 import { DynamoDBStreamEvent } from 'aws-lambda'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
+import { createControllerHandler } from '../util/apiGateway'
 
 
 export const handleSportsDBStream = async (event: DynamoDBStreamEvent): Promise<void> => {
@@ -25,3 +26,4 @@ export const handleSportsDBStream = async (event: DynamoDBStreamEvent): Promise<
 
   // TODO: insert data into stasistics table 
 }
+
